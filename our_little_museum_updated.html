@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Our Little Museum — For Bibi</title>
+
+  <style>
+    /* =========================================================
+       1. Theme and page layout
+       ========================================================= */
+    :root {
+      --gold: #d9bd82;
+      --cream: #f4ead7;
+      --ink: #100d0b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--ink);
+      color: var(--cream);
+      font-family: Georgia, serif;
+    }
+
+    #scene {
+      position: fixed;
+      inset: 0;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* =========================================================
+       2. Intro screen, buttons, and shared panels
+       ========================================================= */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: radial-gradient(ellipse at center, #342619ef, #080706f7);
+    }
+
+    .panel {
+      width: min(680px, 94vw);
+      max-height: 92vh;
+      overflow: auto;
+      padding: clamp(24px, 5vw, 44px);
+      border: 1px solid #d9bd8277;
+      background: #100e0ded;
+      box-shadow: 0 20px 90px #000b;
+      text-align: center;
+    }
+
+    .kicker {
+      color: var(--gold);
+      font: 10px Arial, sans-serif;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 20px 0;
+      font-size: clamp(42px, 8vw, 76px);
+      font-weight: 400;
+      line-height: 0.98;
+    }
+
+    h1 em,
+    .gold {
+      color: var(--gold);
+    }
+
+    .lead {
+      color: #d9cfbf;
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    button,
+    .filelabel {
+      display: inline-block;
+      margin: 9px 4px 0;
+      padding: 13px 20px;
+      border: 1px solid var(--gold);
+      background: var(--gold);
+      color: #1b160f;
+      cursor: pointer;
+      font: 11px Arial, sans-serif;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    button.secondary {
+      background: transparent;
+      color: var(--gold);
+    }
+
+    button:hover,
+    .filelabel:hover {
+      filter: brightness(1.12);
+    }
+
+    .small {
+      color: #a99d8c;
+      font: 11px Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    #photoInput {
+      display: none;
+    }
+
+    /* =========================================================
+       3. Gallery interface and pop-up windows
+       ========================================================= */
+    #hud {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      display: none;
+      pointer-events: none;
+    }
+
+    #brand {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      color: var(--gold);
+      font: 10px Arial, sans-serif;
+      letter-spacing: 0.2em;
+      text-shadow: 0 2px 6px #000;
+    }
+
+    #help {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      max-width: 96vw;
+      padding: 9px 13px;
+      transform: translateX(-50%);
+      border: 1px solid #d9bd8255;
+      background: #100d0be8;
+      font: 10px Arial, sans-serif;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 8;
+      display: none;
+      place-items: center;
+      padding: 18px;
+      background: #050403b9;
+    }
+
+    .modal .panel {
+      pointer-events: auto;
+    }
+
+    .modal h2 {
+      margin: 12px 0;
+      color: var(--gold);
+      font-size: clamp(27px, 5vw, 38px);
+      font-weight: 400;
+    }
+
+    .modal p {
+      color: #eee3d1;
+      font-size: 17px;
+      line-height: 1.75;
+    }
+
+    #toast {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      z-index: 9;
+      display: none;
+      padding: 10px 14px;
+      transform: translateX(-50%);
+      border: 1px solid var(--gold);
+      background: #15110e;
+      color: var(--cream);
+      font: 11px Arial, sans-serif;
+    }
+
+    #mobile {
+      position: fixed;
+      bottom: 65px;
+      left: 16px;
+      z-index: 3;
+      display: none;
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    #mobile button {
+      margin: 0;
+      padding: 13px;
+      background: #17120dcc;
+      color: #f3e5ca;
+    }
+
+    @media (max-width: 700px) {
+      #help {
+        font-size: 9px;
+        line-height: 1.5;
+        text-align: center;
+        white-space: normal;
+      }
+
+      #mobile {
+        display: flex;
+        flex-direction: column;
+      }
+
+      #brand {
+        font-size: 9px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Three.js renders the walk-through museum inside this element. -->
+  <div id="scene"></div>
+
+  <!-- =========================================================
+       INTRO SCREEN
+       ========================================================= -->
+  <div id="intro" class="overlay">
+    <div class="panel">
+      <div class="kicker">November 17, 2026 · A little collection of us</div>
+      <h1>Our Little<br><em>Museum</em></h1>
+
+      <p class="lead">
+        For <span class="gold">Bibi linda</span>.<br>
+        A place for the memories we've made,<br>
+        and all the ones still waiting for us.
+      </p>
+
+      <p class="lead" style="font-style: italic">
+        “Even though distance separates us, you remind me daily of the moment I'll finally have you in my arms.”
+      </p>
+
+      <button id="enter">Enter our museum</button>
+      <button class="secondary" id="uploadStart">Add our photos</button>
+      <input id="photoInput" type="file" accept="image/*" multiple>
+
+      <p class="small">
+        Best on a computer with headphones. You need to add our photos now
+        to have them appear inside the gallery.
+      </p>
+    </div>
+  </div>
+
+  <!-- Gallery controls and navigation hints. -->
+  <div id="hud">
+    <div id="brand">OUR LITTLE MUSEUM &nbsp; / &nbsp; FOR BIBI · 17 NOV 2026</div>
+    <div id="help">
+      W A S D TO WALK · MOUSE TO LOOK · CLICK A FRAME TO OPEN · ESC TO UNLOCK
+    </div>
+  </div>
+
+  <div id="mobile">
+    <button data-move="forward">▲</button>
+    <div style="display: flex; gap: 6px">
+      <button data-move="left">◀</button>
+      <button data-move="back">▼</button>
+      <button data-move="right">▶</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- =========================================================
+       MEMORY AND END-OF-GALLERY WINDOWS
+       ========================================================= -->
+  <div class="modal" id="memoryModal">
+    <div class="panel">
+      <div class="kicker">A memory in our collection</div>
+      <h2 id="memoryTitle"></h2>
+      <p id="memoryText"></p>
+      <button id="memoryClose">Back to the gallery</button>
+    </div>
+  </div>
+
+  <div class="modal" id="letterModal">
+    <div class="panel">
+      <div class="kicker">A letter from me to you</div>
+      <h2>For Bibi, minha vida, my love, mon coeur</h2>
+
+      <p>
+       Mesmo a distância separando a gente e machucando tanto,
+       você sempre me lembra do quão grande é meu amor por você,
+       pelas memórias que criamos juntos e pelas muitas que ainda vamos criar.
+      </p>
+
+      <p>
+       Obrigado por ser tão amorosa e querida.
+       Penso em você a todo tempo, e pensar em você me traz conforto e paz
+       Te ver é a melhor parte do meu dia.
+      </p>
+
+      <p>
+       Para esse penúltimo mêsversário antes de nos vermos,
+       eu quis criar algo para onde você pudesse voltar sempre que quisesse,
+       ver nossas memórias e lembrar do quão eu te amo e prezo por ti.
+      </p>
+
+      <p>
+       Por todas as nossas risadas, bons dias, beijinhos na câmera, tchaus,
+       e todos os bons momentos, eu te agradeço de coração.
+       Você é, sem dúvida, a mulher da minha vida.
+      </p>
+
+
+      <p class="gold" style="font-style: italic">
+       Esse museu pode ser pequenininho,
+       mas nossa história ainda vai crescer e ultrapassar as paredes dele.
+       Feliz mêsversário de namoro!
+       Eu te escolheria de novo todos os dias da minha vida. Te amo.
+      </p>
+
+      <button id="letterClose">Keep exploring</button>
+    </div>
+  </div>
+
+  <div class="modal" id="surpriseModal">
+    <div class="panel">
+      <div class="kicker">One last little surprise</div>
+      <h2>Our next chapter is waiting</h2>
+
+      <p class="lead">
+        The best part of our story isn't in a frame yet, unfortunately. It's all the
+        memories we haven't made, the places we haven't seen, and the
+        moments when distance is finally just a memory.
+      </p>
+
+      <p style="font-size: 24px; color: #d9bd82">♡</p>
+
+      <p class="gold" style="font-style: italic">
+        Even though I can hold your hand, know that my heart belong to you, ALWAYS.
+      </p>
+
+      <button id="surpriseClose">Back to our museum</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+
+    /* =========================================================
+       1. SCENE, CAMERA, AND RENDERER
+       ========================================================= */
+
+    const host = document.querySelector("#scene");
+    const scene = new THREE.Scene();
+
+    scene.background = new THREE.Color(0x15110d);
+    scene.fog = new THREE.Fog(0x15110d, 18, 45);
+
+    const camera = new THREE.PerspectiveCamera(
+      70,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    camera.position.set(0, 1.65, 9);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
+    host.appendChild(renderer.domElement);
+
+    scene.add(new THREE.HemisphereLight(0xe6d7bd, 0x302318, 1.15));
+
+    /* =========================================================
+       2. MATERIALS AND GALLERY CONSTRUCTION
+       ========================================================= */
+
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      color: 0x393128,
+      roughness: 0.9
+    });
+
+    const floorMaterial = new THREE.MeshStandardMaterial({
+      color: 0x27211b,
+      roughness: 0.48
+    });
+
+    const goldMaterial = new THREE.MeshStandardMaterial({
+      color: 0x9b7947,
+      metalness: 0.62,
+      roughness: 0.34
+    });
+
+    function addCube(width, height, depth, material, x, y, z) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, depth),
+        material
+      );
+
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+
+      return mesh;
+    }
+
+    function buildGallery() {
+      // Floor, ceiling, side walls, and back wall.
+      addCube(12, 0.25, 36, floorMaterial, 0, -0.15, -2);
+      addCube(
+        12, 0.2, 36,
+        new THREE.MeshStandardMaterial({ color: 0x211c17 }),
+        0, 4.2, -2
+      );
+
+      addCube(0.25, 4.4, 36, wallMaterial, -6, 2, -2);
+      addCube(0.25, 4.4, 36, wallMaterial, 6, 2, -2);
+      addCube(12, 4.4, 0.25, wallMaterial, 0, 2, -20);
+      addCube(12, 4.4, 0.25, wallMaterial, 0, 2, 16);
+
+      // Decorative gold lines along the floor and ceiling.
+      for (let z = -19; z < 16; z += 5) {
+        addCube(12, 0.075, 0.12, goldMaterial, 0, 0.02, z);
+        addCube(12, 0.075, 0.12, goldMaterial, 0, 3.9, z);
+      }
+
+      // Warm gallery lighting.
+      for (let z = -16; z <= 10; z += 5) {
+        const light = new THREE.PointLight(0xffd49a, 32, 14, 2);
+        light.position.set(0, 3.6, z);
+        scene.add(light);
+      }
+    }
+
+    buildGallery();
+
+    /* =========================================================
+       3. MEMORY CONTENT
+       Edit the titles and descriptions here.
+       ========================================================= */
+
+    const memories = [
+      [
+        "My Princess",
+        "You are the cutest, prettiest, HOTTEST, partner I could ever dream of, I love you more than you think."
+      ],
+      [
+        "My Favorite Person",
+        "You make ordinary days feel special, even the smallest moments become my favorites when they're with you."
+      ],
+      [
+        "My little Monkey",
+        "The laughs, the talks, the silly moments, and the quiet ones, every single is good when I'm with you))"
+      ],
+      [
+        "Mon Coeur",
+        "I'll call you this and only you and your brother will understand."
+      ],
+      [
+        "My love",
+        "I can't wait for all the memories we'll create together."
+      ],
+      [
+        "My Cutie))",
+        "Happy monthversary, Bibi. If I could choose again, I would still choose you."
+      ]
+    ];
+
+    /* =========================================================
+       4. DECORATIVE MEMORY ARTWORK
+       ========================================================= */
+
+    const artMeshes = [];
+    const frameGroups = [];
+
+    function makeMemoryTexture(index, title) {
+      const canvas = document.createElement("canvas");
+      canvas.width = 512;
+      canvas.height = 640;
+
+      const context = canvas.getContext("2d");
+
+      const palettes = [
+        ["#24333a", "#c99a6e"],
+        ["#443039", "#d6a18c"],
+        ["#253b37", "#bba078"],
+        ["#30283c", "#b89bb0"],
+        ["#2e302c", "#d2b17b"],
+        ["#49352c", "#e0b88e"]
+      ];
+
+      const gradient = context.createLinearGradient(0, 0, 512, 640);
+      gradient.addColorStop(0, palettes[index % 6][0]);
+      gradient.addColorStop(1, palettes[index % 6][1]);
+
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 512, 640);
+
+      const glow = context.createRadialGradient(
+        250, 230, 10,
+        250, 230, 250
+      );
+
+      glow.addColorStop(0, "#fff0c7aa");
+      glow.addColorStop(1, "#fff0c700");
+
+      context.fillStyle = glow;
+      context.fillRect(0, 0, 512, 540);
+
+      // Simple illustrated figures.
+      context.fillStyle = "#1d1918";
+
+      context.beginPath();
+      context.ellipse(210, 385, 48, 80, -0.1, 0, 7);
+      context.fill();
+      context.fillRect(174, 430, 72, 130);
+
+      context.beginPath();
+      context.ellipse(305, 395, 44, 72, 0.1, 0, 7);
+      context.fill();
+      context.fillRect(270, 435, 70, 125);
+
+      context.strokeStyle = "#1d1918";
+      context.lineWidth = 20;
+      context.beginPath();
+      context.moveTo(238, 465);
+      context.lineTo(278, 470);
+      context.stroke();
+
+      // Caption at the bottom of the artwork.
+      context.fillStyle = "#17120fe0";
+      context.fillRect(0, 548, 512, 92);
+
+      context.textAlign = "center";
+      context.fillStyle = "#f5e7cd";
+      context.font = "italic 35px Georgia";
+      context.fillText(title, 256, 590);
+
+      context.fillStyle = "#d9bd82";
+      context.font = "16px Georgia";
+      context.fillText("A MOMENT IN OUR STORY", 256, 618);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+
+      return texture;
+    }
+
+    function addMemoryFrame(side, z, memoryIndex) {
+      const group = new THREE.Group();
+
+      group.position.set(
+        side === "L" ? -5.82 : 5.82,
+        2.1,
+        z
+      );
+
+      group.rotation.y = side === "L" ? Math.PI / 2 : -Math.PI / 2;
+      scene.add(group);
+
+      const frame = new THREE.Mesh(
+        new THREE.BoxGeometry(1.9, 2.36, 0.16),
+        goldMaterial
+      );
+
+      frame.castShadow = true;
+      group.add(frame);
+
+      const backing = new THREE.Mesh(
+        new THREE.BoxGeometry(1.68, 2.14, 0.17),
+        new THREE.MeshStandardMaterial({ color: 0x15100d })
+      );
+
+      backing.position.z = 0.02;
+      group.add(backing);
+
+      const pictureMaterial = new THREE.MeshStandardMaterial({
+        map: makeMemoryTexture(memoryIndex, memories[memoryIndex][0]),
+        roughness: 0.92
+      });
+
+      const picture = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.58, 2.04),
+        pictureMaterial
+      );
+
+      picture.position.z = 0.12;
+      group.add(picture);
+
+      const spotlight = new THREE.SpotLight(
+        0xffdba4,
+        20,
+        5,
+        0.45,
+        0.7,
+        1.5
+      );
+
+      spotlight.position.set(0, 1.3, 0.8);
+      spotlight.target.position.set(0, 0, 0);
+      group.add(spotlight, spotlight.target);
+
+      // Only these six memory pictures can be changed by photo uploads.
+      artMeshes.push({
+        object: picture,
+        index: memoryIndex,
+        material: pictureMaterial
+      });
+
+      frameGroups.push(group);
+    }
+
+    function buildMemoryFrames() {
+      const leftPositions = [11, 5, -1, -7, -13, -19];
+      const rightPositions = [8, 2, -4, -10, -16];
+
+      for (let i = 0; i < 6; i++) {
+        addMemoryFrame("L", leftPositions[i], i);
+
+        if (i < 5) {
+          addMemoryFrame("R", rightPositions[i], (i + 1) % 6);
+        }
+      }
+    }
+
+    buildMemoryFrames();
+
+    /* =========================================================
+       5. RED HEART SCULPTURES
+       These replace the original red spheres.
+       ========================================================= */
+
+    function createHeartGeometry() {
+      const shape = new THREE.Shape();
+
+      // A classic heart outline, drawn in the XY plane.
+      shape.moveTo(0, -0.34);
+      shape.bezierCurveTo(-0.12, -0.22, -0.48, 0.02, -0.48, 0.27);
+      shape.bezierCurveTo(-0.48, 0.62, -0.04, 0.68, 0, 0.34);
+      shape.bezierCurveTo(0.04, 0.68, 0.48, 0.62, 0.48, 0.27);
+      shape.bezierCurveTo(0.48, 0.02, 0.12, -0.22, 0, -0.34);
+
+      return new THREE.ExtrudeGeometry(shape, {
+        depth: 0.16,
+        bevelEnabled: true,
+        bevelSegments: 3,
+        steps: 1,
+        bevelSize: 0.035,
+        bevelThickness: 0.035,
+        curveSegments: 16
+      });
+    }
+
+    function addHeartSculpture(z) {
+      const pedestal = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.42, 0.5, 0.8, 24),
+        goldMaterial
+      );
+
+      pedestal.position.set(0, 0.3, z);
+      pedestal.castShadow = true;
+      pedestal.receiveShadow = true;
+      scene.add(pedestal);
+
+      const heartMaterial = new THREE.MeshStandardMaterial({
+        color: 0xd71935,
+        roughness: 0.28,
+        metalness: 0.16
+      });
+
+      const heart = new THREE.Mesh(createHeartGeometry(), heartMaterial);
+
+      heart.position.set(0, 1.02, z);
+      heart.scale.set(0.72, 0.72, 0.72);
+      heart.castShadow = true;
+      heart.receiveShadow = true;
+      scene.add(heart);
+
+      // A small warm light makes the red heart stand out.
+      const heartLight = new THREE.PointLight(0xff5268, 2.5, 3);
+      heartLight.position.set(0, 1.25, z + 0.5);
+      scene.add(heartLight);
+    }
+
+    function buildHeartSculptures() {
+      [7, -5, -15].forEach(addHeartSculpture);
+    }
+
+    buildHeartSculptures();
+
+    /* =========================================================
+       6. FINAL DISPLAY: SALT LAKE TEMPLE
+       This display is intentionally separate from artMeshes.
+       Photo uploads will never replace this picture.
+       ========================================================= */
+
+    const TEMPLE_IMAGE_URL =
+      "https://www.ldstemple.pics/wp-content/uploads/salt-lake-temple-glimmer-of-hope.jpg";
+
+    function addTempleDisplay() {
+      const group = new THREE.Group();
+
+      // Place the large display in the center of the end wall.
+      group.position.set(0, 2.25, -19.72);
+      scene.add(group);
+
+      // Large gold frame and dark inner backing.
+      const outerFrame = new THREE.Mesh(
+        new THREE.BoxGeometry(4.9, 3.55, 0.22),
+        goldMaterial
+      );
+
+      outerFrame.castShadow = true;
+      group.add(outerFrame);
+
+      const backing = new THREE.Mesh(
+        new THREE.BoxGeometry(4.58, 3.23, 0.18),
+        new THREE.MeshStandardMaterial({ color: 0x100d0b })
+      );
+
+      backing.position.z = 0.03;
+      group.add(backing);
+
+      // This texture is loaded independently and is not added to artMeshes.
+      const templeMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.85
+      });
+
+      const templePicture = new THREE.Mesh(
+        new THREE.PlaneGeometry(4.38, 2.92),
+        templeMaterial
+      );
+
+      templePicture.position.z = 0.14;
+      group.add(templePicture);
+
+      const loader = new THREE.TextureLoader();
+      loader.setCrossOrigin("anonymous");
+
+      loader.load(
+        TEMPLE_IMAGE_URL,
+        (texture) => {
+          texture.colorSpace = THREE.SRGBColorSpace;
+          templeMaterial.map = texture;
+          templeMaterial.needsUpdate = true;
+        },
+        undefined,
+        () => {
+          console.warn("The Salt Lake Temple image could not be loaded.");
+          showToast("The temple image could not load. Check your internet connection.");
+        }
+      );
+
+      // Separate caption plaque under the image.
+      const plaque = new THREE.Mesh(
+        new THREE.BoxGeometry(3.2, 0.38, 0.12),
+        goldMaterial
+      );
+
+      plaque.position.set(0, -1.98, 0.12);
+      group.add(plaque);
+
+      const captionCanvas = document.createElement("canvas");
+      captionCanvas.width = 1024;
+      captionCanvas.height = 128;
+
+      const captionContext = captionCanvas.getContext("2d");
+      captionContext.fillStyle = "#9b7947";
+      captionContext.fillRect(0, 0, 1024, 128);
+      captionContext.fillStyle = "#fff2d8";
+      captionContext.textAlign = "center";
+      captionContext.textBaseline = "middle";
+      captionContext.font = "44px Georgia";
+      captionContext.fillText("OUR FUTURE", 512, 64);
+
+      const captionTexture = new THREE.CanvasTexture(captionCanvas);
+      captionTexture.colorSpace = THREE.SRGBColorSpace;
+
+      const caption = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.08, 0.3),
+        new THREE.MeshBasicMaterial({ map: captionTexture })
+      );
+
+      caption.position.set(0, -1.98, 0.19);
+      group.add(caption);
+
+      const displayLight = new THREE.SpotLight(
+        0xffdba4,
+        34,
+        9,
+        0.55,
+        0.65,
+        1.2
+      );
+
+      displayLight.position.set(0, 2.3, 1.8);
+      displayLight.target.position.set(0, 0, 0);
+      group.add(displayLight, displayLight.target);
+    }
+
+    addTempleDisplay();
+
+    /* =========================================================
+       7. POINTER, MOVEMENT, AND INTERACTION STATE
+       ========================================================= */
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    let yaw = 0;
+    let pitch = 0;
+    let locked = false;
+    let started = false;
+
+    const keys = {};
+
+    function showToast(message) {
+      const toast = document.querySelector("#toast");
+      toast.textContent = message;
+      toast.style.display = "block";
+
+      setTimeout(() => {
+        toast.style.display = "none";
+      }, 2400);
+    }
+
+    function showModal(id) {
+      document.getElementById(id).style.display = "grid";
+      document.exitPointerLock?.();
+    }
+
+    function hideModal(id) {
+      document.getElementById(id).style.display = "none";
+
+      if (started) {
+        renderer.domElement.requestPointerLock?.();
+      }
+    }
+
+    function openMemory(index) {
+      document.querySelector("#memoryTitle").textContent = memories[index][0];
+      document.querySelector("#memoryText").textContent = memories[index][1];
+      showModal("memoryModal");
+    }
+
+    /* =========================================================
+       8. PHOTO UPLOADS
+       Only the six regular memory exhibits are updated here.
+       The final Salt Lake Temple display is kept separate.
+       ========================================================= */
+
+    function loadPhotos(files) {
+      const chosenFiles = [...files]
+        .filter((file) => file.type.startsWith("image/"))
+        .slice(0, 6);
+
+      if (!chosenFiles.length) return;
+
+      chosenFiles.forEach((file, index) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          const texture = new THREE.TextureLoader().load(reader.result, () => {
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.needsUpdate = true;
+          });
+
+          const matchingFrames = artMeshes.filter(
+            (art) => art.index === index
+          );
+
+          matchingFrames.forEach((art) => {
+            art.material.map = texture;
+            art.material.needsUpdate = true;
+          });
+        };
+
+        reader.readAsDataURL(file);
+      });
+
+      showToast(
+        `Loading ${chosenFiles.length} photo(s). They appear in order across the first six exhibits.`
+      );
+    }
+
+    /* =========================================================
+       9. BUTTONS AND KEYBOARD EVENTS
+       ========================================================= */
+
+    document.querySelector("#enter").addEventListener("click", () => {
+      started = true;
+      document.querySelector("#intro").style.display = "none";
+      document.querySelector("#hud").style.display = "block";
+
+      renderer.domElement.requestPointerLock?.();
+
+      if (!musicStarted) {
+        startPiano();
+      }
+    });
+
+    document.querySelector("#uploadStart").addEventListener("click", () => {
+      document.querySelector("#photoInput").click();
+    });
+
+    document.querySelector("#photoInput").addEventListener("change", (event) => {
+      loadPhotos(event.target.files);
+    });
+
+    document.querySelector("#memoryClose").addEventListener("click", () => {
+      hideModal("memoryModal");
+    });
+
+    document.querySelector("#letterClose").addEventListener("click", () => {
+      hideModal("letterModal");
+    });
+
+    document.querySelector("#surpriseClose").addEventListener("click", () => {
+      hideModal("surpriseModal");
+    });
+
+    document.addEventListener("pointerlockchange", () => {
+      locked = document.pointerLockElement === renderer.domElement;
+    });
+
+    document.addEventListener("mousemove", (event) => {
+      if (!locked) return;
+
+      yaw -= event.movementX * 0.002;
+      pitch = Math.max(
+        -1.1,
+        Math.min(1.1, pitch - event.movementY * 0.002)
+      );
+
+      camera.rotation.order = "YXZ";
+      camera.rotation.set(pitch, yaw, 0);
+    });
+
+    document.addEventListener("keydown", (event) => {
+      keys[event.code] = true;
+
+      if (event.code === "KeyL" && started) {
+        document.querySelector("#photoInput").click();
+      }
+    });
+
+    document.addEventListener("keyup", (event) => {
+      keys[event.code] = false;
+    });
+
+    /* =========================================================
+       10. CLICKING MEMORY FRAMES
+       ========================================================= */
+
+    renderer.domElement.addEventListener("click", (event) => {
+      if (!started || document.querySelector('.modal[style*="grid"]')) {
+        return;
+      }
+
+      const bounds = renderer.domElement.getBoundingClientRect();
+
+      mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+      mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+
+      const memoryPictures = artMeshes.map((art) => art.object);
+      const intersections = raycaster.intersectObjects(memoryPictures);
+
+      if (intersections.length) {
+        const selectedArt = artMeshes.find(
+          (art) => art.object === intersections[0].object
+        );
+
+        openMemory(selectedArt.index);
+      } else if (!locked) {
+        renderer.domElement.requestPointerLock?.();
+      }
+    });
+
+    /* =========================================================
+       11. BACKGROUND MUSIC
+       A soft synthesized piano-like arpeggio.
+       ========================================================= */
+
+    let audioContext = null;
+    let musicStarted = false;
+    let musicTimer = null;
+
+    function startPiano() {
+      try {
+        audioContext = new (
+          window.AudioContext || window.webkitAudioContext
+        )();
+
+        musicStarted = true;
+
+        const notes = [
+          261.63, 329.63, 392, 493.88, 392, 329.63,
+          293.66, 369.99, 440, 554.37, 440, 369.99
+        ];
+
+        let noteIndex = 0;
+
+        function playNextNote() {
+          if (!audioContext) return;
+
+          const now = audioContext.currentTime;
+          const frequency = notes[noteIndex % notes.length];
+
+          [1, 2.002].forEach((ratio, voiceIndex) => {
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+
+            oscillator.type = "sine";
+            oscillator.frequency.value = frequency * ratio;
+
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(
+              voiceIndex === 0 ? 0.045 : 0.009,
+              now + 0.012
+            );
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.45);
+
+            oscillator.connect(gain);
+            gain.connect(audioContext.destination);
+
+            oscillator.start(now);
+            oscillator.stop(now + 1.5);
+          });
+
+          noteIndex++;
+          musicTimer = setTimeout(playNextNote, 520);
+        }
+
+        playNextNote();
+      } catch (error) {
+        showToast("Audio is unavailable in this browser.");
+      }
+    }
+
+    /* =========================================================
+       12. JOURNEY EVENTS
+       ========================================================= */
+
+    let letterShown = false;
+    let surpriseShown = false;
+
+    function checkJourney() {
+      if (!started) return;
+
+      const currentZ = camera.position.z;
+
+      if (currentZ < -14 && !letterShown) {
+        letterShown = true;
+        showModal("letterModal");
+      }
+
+      if (currentZ < -16.4 && !surpriseShown) {
+        surpriseShown = true;
+        showModal("surpriseModal");
+      }
+    }
+
+    /* =========================================================
+       13. MOBILE MOVEMENT CONTROLS
+       ========================================================= */
+
+    document.querySelectorAll("#mobile button").forEach((button) => {
+      const keyCode = {
+        forward: "KeyW",
+        back: "KeyS",
+        left: "KeyA",
+        right: "KeyD"
+      }[button.dataset.move];
+
+      button.addEventListener("pointerdown", () => {
+        keys[keyCode] = true;
+      });
+
+      ["pointerup", "pointerleave", "pointercancel"].forEach((eventName) => {
+        button.addEventListener(eventName, () => {
+          keys[keyCode] = false;
+        });
+      });
+    });
+
+    /* =========================================================
+       14. MAIN ANIMATION AND WALKING LOOP
+       ========================================================= */
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const forward = new THREE.Vector3(
+        -Math.sin(yaw),
+        0,
+        -Math.cos(yaw)
+      );
+
+      const right = new THREE.Vector3(
+        Math.cos(yaw),
+        0,
+        -Math.sin(yaw)
+      );
+
+      const movement = new THREE.Vector3();
+
+      if (keys.KeyW || keys.ArrowUp) movement.add(forward);
+      if (keys.KeyS || keys.ArrowDown) movement.sub(forward);
+      if (keys.KeyA || keys.ArrowLeft) movement.sub(right);
+      if (keys.KeyD || keys.ArrowRight) movement.add(right);
+
+      if (movement.lengthSq()) {
+        camera.position.add(movement.normalize().multiplyScalar(0.075));
+      }
+
+      // Keep the visitor inside the gallery.
+      camera.position.x = THREE.MathUtils.clamp(
+        camera.position.x,
+        -5.15,
+        5.15
+      );
+
+      camera.position.z = THREE.MathUtils.clamp(
+        camera.position.z,
+        -17.2,
+        14
+      );
+
+      camera.position.y = 1.65;
+
+      checkJourney();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    /* =========================================================
+       15. WINDOW RESIZE
+       ========================================================= */
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
